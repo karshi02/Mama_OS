@@ -1,5 +1,3 @@
-# MyOS Makefile สำหรับ Windows UCRT64 (ใช้ PE + objcopy)
-
 ASM = nasm
 CC = gcc
 LD = ld
@@ -7,23 +5,18 @@ OBJCOPY = objcopy
 QEMU = qemu-system-x86_64
 
 BUILD_DIR = build
-
-# 32-bit flags (ไม่มี -fno-rtti เพราะใช้กับ C ไม่ได้)
-CFLAGS = -m32 -ffreestanding -nostdlib -nostartfiles -fno-stack-protector \
-         -Wall -Wextra -Iinclude -Idrivers
-
-# ใช้ i386pe (Windows PE format) แทน elf_i386
+CFLAGS = -m32 -ffreestanding -nostdlib -nostartfiles -fno-stack-protector -Wall -Wextra -Iinclude -Idrivers
 LDFLAGS = -mi386pe -T linker.ld
 
-BOOT_SRC = boot/boot.s
-KERNEL_SRC = kernel/kernel.c
-DRIVERS_SRC = drivers/vga.c drivers/keyboard.c
+BOOT_SRC    = boot/boot.s
+WRAPPER_SRC = kernel/interrupt_wrapper.asm
 
-KERNEL_OBJ = $(BUILD_DIR)/kernel.o $(BUILD_DIR)/vga.o $(BUILD_DIR)/keyboard.o
-BOOT_BIN = $(BUILD_DIR)/boot.bin
-KERNEL_PE = $(BUILD_DIR)/kernel.pe
+KERNEL_OBJ = $(BUILD_DIR)/kernel.o $(BUILD_DIR)/vga.o $(BUILD_DIR)/keyboard.o $(BUILD_DIR)/idt.o $(BUILD_DIR)/pic.o $(BUILD_DIR)/interrupt_wrapper.o
+
+BOOT_BIN   = $(BUILD_DIR)/boot.bin
+KERNEL_PE  = $(BUILD_DIR)/kernel.pe
 KERNEL_BIN = $(BUILD_DIR)/kernel.bin
-FINAL_IMG = $(BUILD_DIR)/myos.img
+FINAL_IMG  = $(BUILD_DIR)/myos.img
 
 all: $(FINAL_IMG)
 
@@ -33,7 +26,7 @@ $(BUILD_DIR):
 $(BOOT_BIN): $(BOOT_SRC) | $(BUILD_DIR)
 	$(ASM) -f bin -o $@ $<
 
-$(BUILD_DIR)/kernel.o: $(KERNEL_SRC) | $(BUILD_DIR)
+$(BUILD_DIR)/kernel.o: kernel/kernel.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/vga.o: drivers/vga.c | $(BUILD_DIR)
@@ -42,23 +35,26 @@ $(BUILD_DIR)/vga.o: drivers/vga.c | $(BUILD_DIR)
 $(BUILD_DIR)/keyboard.o: drivers/keyboard.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# สร้าง PE executable (Windows format)
+$(BUILD_DIR)/idt.o: kernel/idt.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/pic.o: kernel/pic.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/interrupt_wrapper.o: $(WRAPPER_SRC) | $(BUILD_DIR)
+	$(ASM) -f win32 -o $@ $<
+
 $(KERNEL_PE): $(KERNEL_OBJ) linker.ld | $(BUILD_DIR)
 	$(LD) $(LDFLAGS) -o $@ $(KERNEL_OBJ)
 
-# แปลง PE เป็น raw binary สำหรับ boot
 $(KERNEL_BIN): $(KERNEL_PE)
 	$(OBJCOPY) -O binary $< $@
 
-# รวม bootloader + kernel เป็น disk image
-$(FINAL_IMG): $(BOOT_BIN) $(KERNEL_BIN)
+$(FINAL_IMG): $(BOOT_BIN) $(KERNEL_BIN) | $(BUILD_DIR)
 	dd if=/dev/zero of=$@ bs=512 count=2880 2>/dev/null || true
 	dd if=$(BOOT_BIN) of=$@ bs=512 conv=notrunc 2>/dev/null || true
 	dd if=$(KERNEL_BIN) of=$@ bs=512 seek=2 conv=notrunc 2>/dev/null || true
-	@echo "========================================="
-	@echo "Build successful! Image size: $$(wc -c < $@) bytes"
-	@echo "Run 'make run' to start QEMU"
-	@echo "========================================="
+	@echo Build successful!
 
 run: $(FINAL_IMG)
 	$(QEMU) -drive format=raw,file=$(FINAL_IMG) -m 256M

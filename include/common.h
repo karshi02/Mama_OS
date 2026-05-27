@@ -1,39 +1,26 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-// Color definitions for VGA text mode
-typedef enum {
-    COLOR_BLACK = 0,
-    COLOR_BLUE = 1,
-    COLOR_GREEN = 2,
-    COLOR_CYAN = 3,
-    COLOR_RED = 4,
-    COLOR_MAGENTA = 5,
-    COLOR_BROWN = 6,
-    COLOR_LIGHT_GREY = 7,
-    COLOR_DARK_GREY = 8,
-    COLOR_LIGHT_BLUE = 9,
-    COLOR_LIGHT_GREEN = 10,
-    COLOR_LIGHT_CYAN = 11,
-    COLOR_LIGHT_RED = 12,
-    COLOR_LIGHT_MAGENTA = 13,
-    COLOR_YELLOW = 14,
-    COLOR_WHITE = 15
-} vga_color_t;
+#include <stdint.h>
 
-// VGA dimensions
-#define VGA_WIDTH   80
-#define VGA_HEIGHT  25
-#define VGA_ADDRESS 0xB8000
+static inline void outb(uint16_t port, uint8_t val) {
+    asm volatile("outb %0, %1" : : "a"(val), "Nd"(port));
+}
 
-// Keyboard scancodes
-#define KEY_ENTER   0x1C
-#define KEY_BACKSPACE 0x0E
-#define KEY_SPACE   0x39
-#define KEY_ESC     0x01
+static inline uint8_t inb(uint16_t port) {
+    uint8_t ret;
+    asm volatile("inb %1, %0" : "=a"(ret) : "Nd"(port));
+    return ret;
+}
 
-// Function prototypes
-void outb(unsigned short port, unsigned char data);
-unsigned char inb(unsigned short port);
+static inline void outw(uint16_t port, uint16_t val) {
+    asm volatile("outw %0, %1" : : "a"(val), "Nd"(port));
+}
+
+static inline uint16_t inw(uint16_t port) {
+    uint16_t ret;
+    asm volatile("inw %1, %0" : "=a"(ret) : "Nd"(port));
+    return ret;
+}
 
 #endif
