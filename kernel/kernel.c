@@ -1,22 +1,14 @@
-#include <stdint.h>
 #include "vga.h"
-#include "keyboard.h"
-#include "pic.h"
-#include "idt.h"
 
 void kernel_main(void) {
     vga_init();
-    vga_print("Welcome to MyOS\n");
-    vga_print("Kernel initialized successfully.\n");
-    vga_print("Type something: ");
+    vga_clear();
+    vga_print("Welcome to MyOS!\n");
+    vga_print("Kernel loaded successfully at 0x10000\n");
+    vga_print("System is running!\n");
     
-    remap_pic();
-    init_idt();
-    enable_keyboard();
-    
-    asm volatile("sti");
-    
+    // Hang
     while(1) {
-        // idle
+        asm volatile("hlt");
     }
 }

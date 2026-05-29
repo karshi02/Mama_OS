@@ -5,16 +5,16 @@ OBJCOPY = objcopy
 QEMU = qemu-system-x86_64
 
 BUILD_DIR = build
-CFLAGS = -m32 -ffreestanding -fno-stack-protector -Wall -Wextra -Iinclude -Idrivers -std=gnu99 -O2 -fno-pie -no-pie -mgeneral-regs-only
-LDFLAGS = -m elf_i386 -T linker.ld -nostdlib -static
+CFLAGS = -m32 -ffreestanding -nostdlib -nostartfiles -fno-stack-protector -Wall -Wextra -Iinclude -Idrivers
+LDFLAGS = -mi386pe -T linker.ld
 
 BOOT_SRC    = boot/boot.s
 WRAPPER_SRC = kernel/interrupt_wrapper.asm
 
-KERNEL_OBJ = $(BUILD_DIR)/start.o $(BUILD_DIR)/kernel.o $(BUILD_DIR)/vga.o $(BUILD_DIR)/keyboard.o $(BUILD_DIR)/idt.o $(BUILD_DIR)/pic.o $(BUILD_DIR)/interrupt_wrapper.o
+KERNEL_OBJ = $(BUILD_DIR)/kernel.o $(BUILD_DIR)/vga.o $(BUILD_DIR)/keyboard.o $(BUILD_DIR)/idt.o $(BUILD_DIR)/pic.o $(BUILD_DIR)/interrupt_wrapper.o
 
 BOOT_BIN   = $(BUILD_DIR)/boot.bin
-KERNEL_ELF = $(BUILD_DIR)/kernel.elf
+KERNEL_PE  = $(BUILD_DIR)/kernel.pe
 KERNEL_BIN = $(BUILD_DIR)/kernel.bin
 FINAL_IMG  = $(BUILD_DIR)/myos.img
 
@@ -25,9 +25,6 @@ $(BUILD_DIR):
 
 $(BOOT_BIN): $(BOOT_SRC) | $(BUILD_DIR)
 	$(ASM) -f bin -o $@ $<
-
-$(BUILD_DIR)/start.o: kernel/start.s | $(BUILD_DIR)
-	$(ASM) -f elf32 -o $@ $<
 
 $(BUILD_DIR)/kernel.o: kernel/kernel.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -45,27 +42,24 @@ $(BUILD_DIR)/pic.o: kernel/pic.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/interrupt_wrapper.o: $(WRAPPER_SRC) | $(BUILD_DIR)
-	$(ASM) -f elf32 -o $@ $<
+	$(ASM) -f win32 -o $@ $<
 
-$(KERNEL_ELF): $(KERNEL_OBJ) linker.ld | $(BUILD_DIR)
+$(KERNEL_PE): $(KERNEL_OBJ) linker.ld | $(BUILD_DIR)
 	$(LD) $(LDFLAGS) -o $@ $(KERNEL_OBJ)
 
-$(KERNEL_BIN): $(KERNEL_ELF)
+$(KERNEL_BIN): $(KERNEL_PE)
 	$(OBJCOPY) -O binary $< $@
 
 $(FINAL_IMG): $(BOOT_BIN) $(KERNEL_BIN) | $(BUILD_DIR)
 	dd if=/dev/zero of=$@ bs=512 count=2880 2>/dev/null || true
 	dd if=$(BOOT_BIN) of=$@ bs=512 conv=notrunc 2>/dev/null || true
 	dd if=$(KERNEL_BIN) of=$@ bs=512 seek=2 conv=notrunc 2>/dev/null || true
-	@echo "Build successful! Image: $@"
+	@echo Build successful!
 
 run: $(FINAL_IMG)
-	$(QEMU) -drive format=raw,file=$< -m 256M
-
-debug: $(FINAL_IMG)
-	$(QEMU) -drive format=raw,file=$< -m 256M -s -S -no-reboot -no-shutdown
+	$(QEMU) -drive format=raw,file=$(FINAL_IMG) -m 256M
 
 clean:
 	rm -rf $(BUILD_DIR)
 
-.PHONY: all run debug clean
+.PHONY: all run clean
