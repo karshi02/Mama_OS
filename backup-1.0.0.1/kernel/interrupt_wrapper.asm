@@ -1,10 +1,19 @@
-[BITS 32]
-[GLOBAL _keyboard_handler_wrapper]
+global keyboard_handler_wrapper
+extern keyboard_handler_main
 
-extern _keyboard_handler_main
-
-_keyboard_handler_wrapper:
+section .text
+keyboard_handler_wrapper:
     pusha
-    call _keyboard_handler_main
+    push ds
+    push es
+    push fs
+    push gs
+    
+    call keyboard_handler_main
+    
+    pop gs
+    pop fs
+    pop es
+    pop ds
     popa
     iret

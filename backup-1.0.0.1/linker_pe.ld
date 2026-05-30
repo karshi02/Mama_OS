@@ -1,23 +1,19 @@
-OUTPUT_FORMAT(elf32-i386)
+OUTPUT_FORMAT(pei-i386)
 ENTRY(_start)
 
 SECTIONS
 {
-    . = 0x10000;
+    . = 0x1000;
     
     .text : {
         *(.text)
-        *(.text.*)
     }
     
     .data : {
         *(.data)
-        *(.data.*)
     }
     
     .bss : {
         *(.bss)
-        *(.bss.*)
-        *(COMMON)
     }
 }

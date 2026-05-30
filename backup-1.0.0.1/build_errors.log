@@ -1,0 +1,13 @@
+mkdir -p build
+nasm -f bin -o build/boot.bin boot/boot.s
+nasm -f elf32 -o build/start.o kernel/start.s
+gcc -m32 -ffreestanding -fno-stack-protector -Wall -Wextra -Iinclude -Idrivers -std=gnu99 -O2 -fno-pie -no-pie -mgeneral-regs-only -c kernel/kernel.c -o build/kernel.o
+gcc -m32 -ffreestanding -fno-stack-protector -Wall -Wextra -Iinclude -Idrivers -std=gnu99 -O2 -fno-pie -no-pie -mgeneral-regs-only -c drivers/vga.c -o build/vga.o
+gcc -m32 -ffreestanding -fno-stack-protector -Wall -Wextra -Iinclude -Idrivers -std=gnu99 -O2 -fno-pie -no-pie -mgeneral-regs-only -c drivers/keyboard.c -o build/keyboard.o
+drivers/keyboard.c:34:6: error: redefinition of ‘keyboard_handler_main’
+   34 | void keyboard_handler_main(void) {
+      |      ^~~~~~~~~~~~~~~~~~~~~
+drivers/keyboard.c:16:6: note: previous definition of ‘keyboard_handler_main’ with type ‘void(void)’
+   16 | void keyboard_handler_main(void) {
+      |      ^~~~~~~~~~~~~~~~~~~~~
+make: *** [Makefile:39: build/keyboard.o] Error 1
