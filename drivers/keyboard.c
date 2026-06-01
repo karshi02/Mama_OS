@@ -1,6 +1,6 @@
 #include "keyboard.h"
-#include "vga.h"
 #include "common.h"
+#include "shell.h"
 
 #define KEYBOARD_PORT 0x60
 
@@ -17,24 +17,15 @@ void init_keyboard(void) {}
 
 void keyboard_handler_main(void) {
     uint8_t scancode = inb(KEYBOARD_PORT);
-
-    // send EOI to PIC
     outb(0x20, 0x20);
 
-    // ignore key release (bit 7 set)
     if (scancode & 0x80) return;
 
-    if (scancode == 0x1C) {
-        vga_putchar('\n');
-        return;
-    }
-    if (scancode == 0x0E) {
-        vga_putchar('\b');
-        return;
-    }
+    char c = 0;
+    if (scancode == 0x1C) c = '\n';
+    else if (scancode == 0x0E) c = '\b';
+    else if (scancode < sizeof(scancode_table))
+        c = scancode_table[scancode];
 
-    if (scancode < sizeof(scancode_table)) {
-        char c = scancode_table[scancode];
-        if (c) vga_putchar(c);
-    }
+    if (c) shell_handle_char(c);
 }

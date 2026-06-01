@@ -11,7 +11,7 @@ LDFLAGS = -m elf_i386 -T linker.ld -nostdlib -static
 BOOT_SRC    = boot/boot.s
 WRAPPER_SRC = kernel/interrupt_wrapper.asm
 
-KERNEL_OBJ = $(BUILD_DIR)/start.o $(BUILD_DIR)/kernel.o $(BUILD_DIR)/vga.o $(BUILD_DIR)/keyboard.o $(BUILD_DIR)/idt.o $(BUILD_DIR)/pic.o $(BUILD_DIR)/interrupt_wrapper.o
+KERNEL_OBJ = $(BUILD_DIR)/start.o $(BUILD_DIR)/kernel.o $(BUILD_DIR)/vga.o $(BUILD_DIR)/keyboard.o $(BUILD_DIR)/idt.o $(BUILD_DIR)/pic.o $(BUILD_DIR)/interrupt_wrapper.o $(BUILD_DIR)/shell.o
 
 BOOT_BIN   = $(BUILD_DIR)/boot.bin
 KERNEL_ELF = $(BUILD_DIR)/kernel.elf
@@ -46,6 +46,9 @@ $(BUILD_DIR)/pic.o: kernel/pic.c | $(BUILD_DIR)
 
 $(BUILD_DIR)/interrupt_wrapper.o: $(WRAPPER_SRC) | $(BUILD_DIR)
 	$(ASM) -f elf32 -o $@ $<
+
+$(BUILD_DIR)/shell.o: kernel/shell.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
 
 $(KERNEL_ELF): $(KERNEL_OBJ) linker.ld | $(BUILD_DIR)
 	$(LD) $(LDFLAGS) -o $@ $(KERNEL_OBJ)
